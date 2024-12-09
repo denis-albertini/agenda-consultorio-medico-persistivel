@@ -17,7 +17,8 @@ const mapaErros = new Map([
   [16, "Erro: objeto não é uma Consulta!"],
   [17, "Erro: já existe uma consulta agendada nesse horário!"],
   [18, "Erro: agendamento não encontrado!"],
-  [19, "Erro: opção inválida!"],
+  [19, "Erro: id não encontrado!"],
+  [20, "Erro: falha ao inicializar a conexão com o banco de dados!"],
 ]);
 
 const mapaSucesso = new Map([

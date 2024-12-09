@@ -1,9 +1,25 @@
 import Consulta from "../model/consulta.js";
 import validador from "../model/validador.js";
 import Result from "../model/result.js";
-import { DateTime } from "luxon";
+import { Op } from "sequelize";
 
 class ConsultaRepository {
+  async registrarUma(consulta) {
+    if (!(consulta instanceof Consulta)) return Result.failure(16);
+
+    await consulta.save();
+
+    return Result.success(3);
+  }
+
+  async removerUma(consulta) {
+    if (!(consulta instanceof Consulta)) return Result.failure(16);
+
+    consulta.destroy();
+
+    return Result.success(4);
+  }
+
   async buscarUma(cpf, data, horaInicial) {
     const erros = [];
 
@@ -15,8 +31,8 @@ class ConsultaRepository {
 
     if (erros.length > 0) return Result.failure(erros);
 
-    data = validaHora.value.data;
-    data = new Date(data.year, data.month, data.day);
+    data = validaHora.value.data.toISODate();
+    horaInicial = validaHora.value.horaInicial.toISOTime();
 
     const consulta = await Consulta.findOne({
       where: { cpf: cpf, data: data, horaInicial: horaInicial },
@@ -24,48 +40,77 @@ class ConsultaRepository {
 
     if (consulta === null) return Result.failure(18);
 
-    consulta.data = DateTime.fromJSDate(consulta.data);
-    consulta.hora = DateTime.fromFormat(consulta.hora, "HHmm");
-
     return Result.success(consulta);
   }
 
-  async buscarTodas() {
-    return await Consulta.findAll();
-  }
-
-  async registrarUma(consulta) {
+  async buscarUmaEmConflitoCom(consulta) {
     if (!(consulta instanceof Consulta)) return Result.failure(16);
 
-    consulta.data = new Date(
-      consulta.data.year,
-      consulta.data.month,
-      consulta.data.day
-    );
-    consulta.horaInicial = DateTime.fromISO(consulta.horaInicial).toFormat(
-      "HHmm"
-    );
-    consulta.horaFinal = DateTime.fromISO(consulta.horaFinal).toFormat("HHmm");
+    const consultaConflitante = await Consulta.findOne({
+      where: {
+        data: consulta.data.toISODate(),
+        [Op.or]: [
+          {
+            [Op.and]: {
+              horaInicial: { [Op.lte]: consulta.horaFinal.toISOTime() },
+              horaFinal: { [Op.gte]: consulta.horaInicial.toISOTime() },
+            },
+          },
+          {
+            horaInicial: {
+              [Op.between]: [
+                consulta.horaInicial.toISOTime(),
+                consulta.horaFinal.toISOTime(),
+              ],
+            },
+          },
+          {
+            horaFinal: {
+              [Op.between]: [
+                consulta.horaInicial.toISOTime(),
+                consulta.horaFinal.toISOTime(),
+              ],
+            },
+          },
+        ],
+      },
+    });
 
-    await consulta.save();
+    if (consultaConflitante === null) return Result.failure();
 
-    return Result.success(3);
+    return Result.success();
   }
 
-  async removerUma(consulta) {
-    consulta.data = new Date(
-      consulta.data.year,
-      consulta.data.month,
-      consulta.data.day
-    );
-    consulta.horaInicial = DateTime.fromISO(consulta.horaInicial).toFormat(
-      "HHmm"
-    );
-    consulta.horaFinal = DateTime.fromISO(consulta.horaFinal).toFormat("HHmm");
+  async buscarTodas() {
+    const consultas = await Consulta.findAll({
+      group: ["id", "data"],
+      order: [["data", "ASC"]],
+    });
 
-    consulta.destroy();
+    return consultas;
+  }
 
-    return Result.success(4);
+  async buscarTodasPorPeriodo(dataInicial, dataFinal) {
+    const erros = [];
+
+    const validaDataInicial = validador.validarData(dataInicial);
+    if (validaDataInicial.isFailure) erros.push(...validaDataInicial.errors);
+
+    const validaDataFinal = validador.validarData(dataFinal);
+    if (validaDataFinal.isFailure) erros.push(...validaDataFinal.errors);
+
+    if (erros.length > 0) return Result.failure(erros);
+
+    dataInicial = validaDataInicial.value.toISODate();
+    dataFinal = validaDataFinal.value.toISODate();
+
+    const consultas = await Consulta.findAll({
+      where: { data: { [Op.between]: [dataInicial, dataFinal] } },
+      group: ["id", "data"],
+      order: [["data", "ASC"]],
+    });
+
+    return consultas;
   }
 }
 

@@ -2,13 +2,21 @@ import consultorio from "../model/consultorio.js";
 import pacienteRegistrarForm from "../view/pacienteRegistrarForm.js";
 import Paciente from "../model/paciente.js";
 import output from "../view/output.js";
+import Result from "../model/result.js";
 
 export default async function pacienteRegistrar(cpfForm) {
   const cpf = cpfForm.cpf;
 
-  const validaCpf = await consultorio.buscarPaciente(cpf);
-  if (validaCpf.isFailure && !validaCpf.errors.find((erro) => erro === 13)) {
-    output(validaCpf);
+  const buscaPaciente = await consultorio.buscarPaciente(cpf);
+  if (
+    buscaPaciente.isFailure &&
+    !buscaPaciente.errors.find((erro) => erro === 13)
+  ) {
+    output(buscaPaciente);
+    return;
+  }
+  if (buscaPaciente.isSuccess) {
+    output(Result.failure(14));
     return;
   }
 

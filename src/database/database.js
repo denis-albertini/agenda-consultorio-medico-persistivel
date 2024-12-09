@@ -21,7 +21,8 @@ class Database {
         host: databaseConfig.host,
         dialect: databaseConfig.dialect,
         logging: false,
-      }
+      },
+      { logging: console.log }
     );
 
     try {
@@ -34,15 +35,11 @@ class Database {
     criarModelConsulta(Consulta, this.#sequelize, Sequelize.DataTypes);
 
     Paciente.hasMany(Consulta, {
-      foreignKey: "paciente_id",
-      onUpdate: "CASCADE",
+      foreignKey: { allowNull: false },
       onDelete: "CASCADE",
-    });
-    Consulta.belongsTo(Paciente, {
-      foreignKey: "paciente_id",
       onUpdate: "CASCADE",
-      onDelete: "CASCADE",
     });
+    Consulta.belongsTo(Paciente);
 
     return true;
   }

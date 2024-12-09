@@ -25,5 +25,18 @@ export default async function consultaRegistrar(cpfForm) {
   }
   const consulta = validaConsulta.value;
 
-  output(await consultorio.registrarConsulta(consulta));
+  const result = await consultorio.registrarConsulta(consulta);
+
+  if (result.isSuccess) {
+    const dataAgendamento = consulta.data;
+    const agendamento = dataAgendamento.set({
+      hour: consulta.horaInicial.hour,
+      minute: consulta.horaInicial.minute,
+    });
+    paciente.ultimoAgendamenmto = agendamento;
+
+    await consultorio.atualizarRegistroPaciente(paciente);
+  }
+
+  output(result);
 }

@@ -13,7 +13,7 @@ export default function output(resultado) {
     return;
   }
 
-  console.log(mapaSucesso.get(resultado.value) || resultado.value);
+  console.log(mapaSucesso.get(resultado.value));
 
   console.log();
 }
